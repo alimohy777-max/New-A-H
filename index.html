@@ -711,6 +711,12 @@ main{max-width:900px;margin:0 auto;padding:14px;}
   </div>
 
   <div class="card">
+    <h2>By User</h2>
+    <div class="settings-sub">Each person's own sales, split out — based on who was signed in when a record was saved.</div>
+    <div id="analyticsByUser"></div>
+  </div>
+
+  <div class="card">
     <h2>Vehicle Sales Profit</h2>
     <div class="settings-sub">Actual profit from deals marked Sold, from the Profit Calculator.</div>
     <div id="analyticsDealsChart"></div>
@@ -965,6 +971,10 @@ function currentUser(){
   if(u) return u;
   // Google-authenticated users aren't in the users list; synthesize a display-only record
   return { id:id, username: localStorage.getItem(AUTH_SESSION_KEY+'_user')||'User', role: localStorage.getItem(AUTH_SESSION_KEY+'_role')||'staff', permissions: defaultPermissions(false) };
+}
+function currentUsername(){
+  var u = currentUser();
+  return u ? u.username : 'Unknown';
 }
 function setAuthed(user){
   localStorage.setItem(AUTH_SESSION_KEY, '1');
@@ -1425,6 +1435,7 @@ $('saveDealBtn').addEventListener('click', function(){
     id: id,
     dateCreated: existing ? existing.dateCreated : new Date().toISOString(),
     status: existing ? existing.status : 'Planning',
+    createdBy: existing ? (existing.createdBy || currentUsername()) : currentUsername(),
     vehicleName: $('c_vehicleName').value,
     year: $('c_year').value,
     make: $('c_make').value,
@@ -1528,7 +1539,7 @@ function renderDealsList(){
     el.innerHTML =
       '<div class="row1">'+
         '<div><div class="veh">'+esc(d.vehicleName||(d.year+' '+d.make+' '+d.model))+'</div>'+
-        '<div class="meta">VIN: '+esc(d.vin||'—')+' &bull; '+esc(d.mileage||'—')+' mi &bull; '+esc(d.titleStatus)+'</div></div>'+
+        '<div class="meta">VIN: '+esc(d.vin||'—')+' &bull; '+esc(d.mileage||'—')+' mi &bull; '+esc(d.titleStatus)+(d.createdBy?' &bull; by '+esc(d.createdBy):'')+'</div></div>'+
         '<span class="badge '+badgeClass+'">'+esc(d.status)+'</span>'+
       '</div>'+
       '<div class="figures"><span>Cost: <b>'+money(d.totalVehicleCost)+'</b></span><span>Actual Profit: <b class="'+(d.actualProfit>=0?'pos':'neg')+'">'+money(d.actualProfit)+'</b></span></div>'+
@@ -1733,10 +1744,13 @@ $('bosSaveBtn').addEventListener('click', function(){
   var data = collectBosData();
   var list = load(KEYS.bos, []);
   if(isNew){
+    data.createdBy = currentUsername();
     list.push(data);
     settings.nextBosNumber = (settings.nextBosNumber||1) + 1;
     save(KEYS.settings, settings);
   } else {
+    var existingBos = list.find(function(x){return x.id===data.id;});
+    data.createdBy = existingBos && existingBos.createdBy ? existingBos.createdBy : currentUsername();
     list = list.map(function(x){return x.id===data.id ? data : x;});
   }
   save(KEYS.bos, list);
@@ -1756,7 +1770,7 @@ function renderBosList(){
     el.className = 'deal-card';
     el.innerHTML =
       '<div class="row1"><div><div class="veh">'+esc(b.number)+'</div>'+
-      '<div class="meta">'+esc(b.year)+' '+esc(b.make)+' '+esc(b.model)+' &bull; Buyer: '+esc(b.buyerName||'—')+'</div></div>'+
+      '<div class="meta">'+esc(b.year)+' '+esc(b.make)+' '+esc(b.model)+' &bull; Buyer: '+esc(b.buyerName||'—')+(b.createdBy?' &bull; by '+esc(b.createdBy):'')+'</div></div>'+
       '<span class="badge">'+esc(b.date||'')+'</span></div>'+
       '<div class="figures"><span>Total: <b>'+money(b.totalAmount)+'</b></span><span>Balance: <b>'+money(b.remainingBalance)+'</b></span></div>'+
       '<div class="btn-row">'+
@@ -2049,10 +2063,13 @@ $('invSaveBtn').addEventListener('click', function(){
   var data = collectInvoiceData();
   var list = load(KEYS.invoices, []);
   if(isNew){
+    data.createdBy = currentUsername();
     list.push(data);
     settings.nextInvNumber = (settings.nextInvNumber||1) + 1;
     save(KEYS.settings, settings);
   } else {
+    var existingInv = list.find(function(x){return x.id===data.id;});
+    data.createdBy = existingInv && existingInv.createdBy ? existingInv.createdBy : currentUsername();
     list = list.map(function(x){return x.id===data.id ? data : x;});
   }
   save(KEYS.invoices, list);
@@ -2072,7 +2089,7 @@ function renderInvList(){
     el.className = 'deal-card';
     el.innerHTML =
       '<div class="row1"><div><div class="veh">'+esc(inv.number)+'</div>'+
-      '<div class="meta">'+esc(inv.year)+' '+esc(inv.make)+' '+esc(inv.model)+' &bull; '+esc(inv.custName||'—')+'</div></div>'+
+      '<div class="meta">'+esc(inv.year)+' '+esc(inv.make)+' '+esc(inv.model)+' &bull; '+esc(inv.custName||'—')+(inv.createdBy?' &bull; by '+esc(inv.createdBy):'')+'</div></div>'+
       '<span class="badge">'+esc(inv.status)+'</span></div>'+
       '<div class="figures"><span>Total: <b>'+money(inv.invoiceTotal)+'</b></span><span>Balance: <b class="'+(inv.balanceDue<=0?'pos':'neg')+'">'+money(inv.balanceDue)+'</b></span></div>'+
       '<div class="btn-row">'+
@@ -2292,6 +2309,59 @@ function renderAnalytics(){
     {label:'Bill of Sale', total: totalBosRevenue},
     {label:'Repair Invoices', total: totalInvRevenue}
   ], true);
+
+  renderAnalyticsByUser(deals, bosList, invList);
+}
+
+function renderAnalyticsByUser(deals, bosList, invList){
+  var byUser = {}; // username -> {vehicleProfit, vehiclesSold, bosRevenue, bosCount, invRevenue, invCount}
+  function bucket(name){
+    var key = name || 'Unassigned';
+    if(!byUser[key]) byUser[key] = { vehicleProfit:0, vehiclesSold:0, bosRevenue:0, bosCount:0, invRevenue:0, invCount:0 };
+    return byUser[key];
+  }
+  deals.forEach(function(d){
+    if(d.status !== 'Sold') return;
+    var b = bucket(d.createdBy);
+    b.vehicleProfit += num(d.actualProfit);
+    b.vehiclesSold += 1;
+  });
+  bosList.forEach(function(bItem){
+    var b = bucket(bItem.createdBy);
+    b.bosRevenue += num(bItem.totalAmount);
+    b.bosCount += 1;
+  });
+  invList.forEach(function(i){
+    var b = bucket(i.createdBy);
+    b.invRevenue += num(i.invoiceTotal);
+    b.invCount += 1;
+  });
+
+  var names = Object.keys(byUser).sort(function(a, b2){
+    var totalA = byUser[a].vehicleProfit + byUser[a].bosRevenue + byUser[a].invRevenue;
+    var totalB = byUser[b2].vehicleProfit + byUser[b2].bosRevenue + byUser[b2].invRevenue;
+    return totalB - totalA;
+  });
+
+  var wrap = $('analyticsByUser');
+  if(names.length === 0){ wrap.innerHTML = '<div class="empty-state">No records saved yet.</div>'; return; }
+  wrap.innerHTML = '';
+  names.forEach(function(name){
+    var b = byUser[name];
+    var combined = b.vehicleProfit + b.bosRevenue + b.invRevenue;
+    var el = document.createElement('div');
+    el.className = 'deal-card';
+    el.innerHTML =
+      '<div class="row1"><div><div class="veh">' + esc(name) + '</div>' +
+      '<div class="meta">' + b.vehiclesSold + ' sold &bull; ' + b.bosCount + ' Bill' + (b.bosCount===1?'':'s') + ' of Sale &bull; ' + b.invCount + ' Repair Invoice' + (b.invCount===1?'':'s') + '</div></div>' +
+      '<span class="badge">' + money(combined) + '</span></div>' +
+      '<table class="summary-list" style="margin-top:6px;">' +
+        '<tr><td>Vehicle Sales Profit</td><td class="' + (b.vehicleProfit>=0?'pos':'neg') + '">' + money(b.vehicleProfit) + '</td></tr>' +
+        '<tr><td>Bill of Sale Revenue</td><td>' + money(b.bosRevenue) + '</td></tr>' +
+        '<tr><td>Repair Invoice Revenue</td><td>' + money(b.invRevenue) + '</td></tr>' +
+      '</table>';
+    wrap.appendChild(el);
+  });
 }
 
 /* ===========================================================
