@@ -706,8 +706,9 @@ main{max-width:900px;margin:0 auto;padding:14px;}
 <section class="section" id="section-analytics">
   <div class="card">
     <h2>Profit &amp; Revenue Overview</h2>
-    <div class="settings-sub">All figures are from your saved records on this device.</div>
+    <div class="settings-sub" id="analyticsScope">Showing this device only.</div>
     <div class="totals-bar" id="analyticsKpis" style="grid-template-columns:1fr 1fr;"></div>
+    <button type="button" class="btn btn-outline" id="refreshAnalyticsBtn" style="margin-top:6px;">Refresh from Google Sheets</button>
   </div>
 
   <div class="card">
@@ -2287,7 +2288,12 @@ function renderAnalytics(){
   var deals = load(KEYS.deals, []);
   var bosList = load(KEYS.bos, []);
   var invList = load(KEYS.invoices, []);
+  renderAnalyticsWith(deals, bosList, invList);
+  var cfg = getSyncConfig();
+  $('analyticsScope').textContent = cfg.url ? 'Showing this device only — tap "Refresh from Google Sheets" for the whole team.' : 'Showing this device only.';
+}
 
+function renderAnalyticsWith(deals, bosList, invList){
   var soldDeals = deals.filter(function(d){ return d.status === 'Sold'; });
   var totalVehicleProfit = soldDeals.reduce(function(s,d){ return s + num(d.actualProfit); }, 0);
   var totalBosRevenue = bosList.reduce(function(s,b){ return s + num(b.totalAmount); }, 0);
@@ -2363,6 +2369,44 @@ function renderAnalyticsByUser(deals, bosList, invList){
     wrap.appendChild(el);
   });
 }
+
+function fetchSheetRows(sheetName){
+  var cfg = getSyncConfig();
+  return fetch(cfg.url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({ secret: cfg.secret, action: 'list', sheet: sheetName })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    if(!res.ok) throw new Error(res.error || ('Could not read ' + sheetName));
+    return res.rows || [];
+  });
+}
+function mergeById(localList, remoteRows){
+  var byId = {};
+  localList.forEach(function(r){ if(r.id) byId[r.id] = r; });
+  remoteRows.forEach(function(r){ if(r.id && !byId[r.id]) byId[r.id] = r; });
+  return Object.keys(byId).map(function(k){ return byId[k]; });
+}
+$('refreshAnalyticsBtn').addEventListener('click', function(){
+  var cfg = getSyncConfig();
+  if(!cfg.url){ toast('Set up Google Sheets Sync in Settings first.'); return; }
+  $('analyticsScope').textContent = 'Refreshing from Google Sheets...';
+  Promise.all([
+    fetchSheetRows('Vehicle Deals'),
+    fetchSheetRows('Bills of Sale'),
+    fetchSheetRows('Repair Invoices')
+  ]).then(function(results){
+    var mergedDeals = mergeById(load(KEYS.deals, []), results[0]);
+    var mergedBos = mergeById(load(KEYS.bos, []), results[1]);
+    var mergedInv = mergeById(load(KEYS.invoices, []), results[2]);
+    renderAnalyticsWith(mergedDeals, mergedBos, mergedInv);
+    $('analyticsScope').textContent = 'Showing the whole team, as of just now.';
+    toast('Analytics refreshed from Google Sheets.');
+  }).catch(function(err){
+    $('analyticsScope').textContent = 'Could not refresh from Google Sheets.';
+    toast('Refresh failed: ' + (err.message || 'check your connection.'));
+  });
+});
 
 /* ===========================================================
    GOOGLE SHEETS SYNC (optional, via Apps Script Web App)
