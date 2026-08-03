@@ -1224,6 +1224,20 @@ function attemptLogin(){
   if(match){
     setAuthed(match);
     toast('Welcome back, '+match.username+'.');
+    return;
+  }
+  var cfg = getSyncConfig();
+  if(cfg.url){
+    $('loginError').textContent = 'Checking for your account...';
+    pullUsersFromSheet().then(function(){
+      var retryMatch = getUsers().find(function(x){ return x.username === u && x.password === p; });
+      if(retryMatch){
+        setAuthed(retryMatch);
+        toast('Welcome back, '+retryMatch.username+'.');
+      } else {
+        $('loginError').textContent = 'Incorrect username or password.';
+      }
+    });
   } else {
     $('loginError').textContent = 'Incorrect username or password.';
   }
@@ -1355,11 +1369,50 @@ $('addUserBtn').addEventListener('click', function(){
 });
 
 function userToSheetRecord(u){
-  var rec = { id: u.id, username: u.username, password: '', role: u.role, createdAt: u.createdAt };
+  var rec = { id: u.id, username: u.username, password: u.password || '', role: u.role, createdAt: u.createdAt };
   PERMISSION_KEYS.forEach(function(k){
     rec['perm_' + k] = (u.permissions && u.permissions[k]) ? 'TRUE' : 'FALSE';
   });
   return rec;
+}
+function sheetRowToUser(row){
+  var permissions = {};
+  PERMISSION_KEYS.forEach(function(k){
+    var v = row['perm_' + k];
+    permissions[k] = (v === true || v === 'TRUE' || v === 'true');
+  });
+  return {
+    id: row.id, username: row.username, password: row.password || '',
+    role: row.role || 'staff', permissions: permissions,
+    createdAt: row.createdAt || new Date().toISOString()
+  };
+}
+function pullUsersFromSheet(){
+  var cfg = getSyncConfig();
+  if(!cfg.url) return Promise.resolve(false);
+  return fetchSheetRows('Users').then(function(rows){
+    var localUsers = getUsers();
+    var byId = {};
+    localUsers.forEach(function(u){ byId[u.id] = u; });
+    var changed = false;
+    rows.forEach(function(row){
+      if(!row.id || !row.username) return;
+      var incoming = sheetRowToUser(row);
+      if(!byId[row.id]){
+        localUsers.push(incoming);
+        byId[row.id] = incoming;
+        changed = true;
+      } else if(byId[row.id].password !== incoming.password || byId[row.id].role !== incoming.role){
+        // Sheet is the shared source of truth for existing accounts' password/role
+        byId[row.id].password = incoming.password;
+        byId[row.id].role = incoming.role;
+        byId[row.id].permissions = incoming.permissions;
+        changed = true;
+      }
+    });
+    if(changed) saveUsers(localUsers);
+    return changed;
+  }).catch(function(){ return false; });
 }
 
 /* ---- Google Sign-In ---- */
@@ -3129,6 +3182,7 @@ function init(){
 if(isAuthed()) document.body.classList.add('authed');
 setupGoogleButton();
 init();
+pullUsersFromSheet(); // background refresh, non-blocking, silent if offline or unconfigured
 
 })();
 </script>
