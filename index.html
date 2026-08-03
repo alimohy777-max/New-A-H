@@ -696,6 +696,22 @@ main{max-width:900px;margin:0 auto;padding:14px;}
     <div class="hint">Only works once this app is hosted on a real website (not a local file) with this Client ID registered in Google Cloud Console.</div>
     <button type="button" class="btn btn-outline" id="saveGoogleIdBtn" style="margin-top:10px;">Save</button>
   </div>
+  <div class="card" id="sheetsSyncCard">
+    <h2>Google Sheets Sync (optional)</h2>
+    <div class="settings-sub">Connects this app to your "A&amp;H Auto Database" Google Sheet via a Google Apps Script Web App. Every saved deal, Bill of Sale, and Repair Invoice will also be pushed there.</div>
+    <label>Apps Script Web App URL</label>
+    <input id="s_syncUrl" placeholder="https://script.google.com/macros/s/XXXXX/exec">
+    <label>Shared Secret</label>
+    <input id="s_syncSecret" placeholder="Same secret you set in the script">
+    <div id="syncStatus" class="hint"></div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary" id="saveSyncBtn">Save</button>
+      <button type="button" class="btn btn-outline" id="testSyncBtn">Test Connection</button>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-secondary" id="syncAllBtn">Sync All Existing Data Now</button>
+    </div>
+  </div>
   <div class="card" id="exportCard">
     <h2>Export &amp; Backup</h2>
     <div class="btn-row">
@@ -791,7 +807,8 @@ var KEYS = {
   invoices: 'ah_repair_invoices',
   settings: 'ah_company_settings',
   auth: 'ah_auth_config',
-  users: 'ah_users'
+  users: 'ah_users',
+  sheetsSync: 'ah_sheets_sync'
 };
 
 /* ---------------------------------------------------------
@@ -874,6 +891,7 @@ function applyRoleVisibility(){
   $('usersCard').style.display = isAdmin ? 'block' : 'none';
   $('companySettingsCard1').style.display = fullSettings ? 'block' : 'none';
   $('companySettingsCard2').style.display = fullSettings ? 'block' : 'none';
+  $('sheetsSyncCard').style.display = fullSettings ? 'block' : 'none';
   $('exportCard').style.display = fullSettings ? 'block' : 'none';
   if(u){
     $('myAccountUsername').textContent = u.username;
@@ -1140,6 +1158,7 @@ function loadSettingsForm(){
   $('s_myNewPass').value = '';
   applyRoleVisibility();
   renderUsersList();
+  loadSyncForm();
 }
 $('saveSettingsBtn').addEventListener('click', function(){
   settings.dealerAddress = $('s_dealerAddress').value;
@@ -1329,6 +1348,7 @@ $('saveDealBtn').addEventListener('click', function(){
   $('dealId').value = id;
   toast('Deal saved.');
   renderDealsList();
+  syncToSheet('Vehicle Deals', dealToSheetRecord(deal));
 });
 
 /* ===========================================================
@@ -1620,6 +1640,7 @@ $('bosSaveBtn').addEventListener('click', function(){
   $('bosId').value = data.id;
   toast('Bill of Sale saved.');
   renderBosList();
+  syncToSheet('Bills of Sale', data);
 });
 
 function renderBosList(){
@@ -1935,6 +1956,7 @@ $('invSaveBtn').addEventListener('click', function(){
   $('invId').value = data.id;
   toast('Repair Invoice saved.');
   renderInvList();
+  syncToSheet('Repair Invoices', invoiceToSheetRecord(data));
 });
 
 function renderInvList(){
@@ -2097,6 +2119,81 @@ $('deleteAllBtn').addEventListener('click', function(){
       toast('All data deleted.');
     }
   }
+});
+
+/* ===========================================================
+   GOOGLE SHEETS SYNC (optional, via Apps Script Web App)
+=========================================================== */
+function getSyncConfig(){ return Object.assign({url:'', secret:''}, load(KEYS.sheetsSync, {})); }
+function setSyncConfig(cfg){ save(KEYS.sheetsSync, cfg); }
+
+function loadSyncForm(){
+  var cfg = getSyncConfig();
+  $('s_syncUrl').value = cfg.url || '';
+  $('s_syncSecret').value = cfg.secret || '';
+  $('syncStatus').textContent = cfg.url ? '' : 'Not connected yet — paste your Apps Script Web App URL and secret, then Save.';
+}
+
+function dealToSheetRecord(deal){
+  var rec = Object.assign({}, deal);
+  rec['expenses (JSON)'] = JSON.stringify(deal.expenses || []);
+  delete rec.expenses;
+  return rec;
+}
+function invoiceToSheetRecord(inv){
+  var rec = Object.assign({}, inv);
+  rec['lineItems (JSON)'] = JSON.stringify(inv.lineItems || []);
+  delete rec.lineItems;
+  return rec;
+}
+
+function syncToSheet(sheetName, record, silent){
+  var cfg = getSyncConfig();
+  if(!cfg.url) return; // sync not set up — skip quietly, app still works fully offline
+  fetch(cfg.url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({ secret: cfg.secret, action: 'upsert', sheet: sheetName, record: record })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    if(!res.ok && !silent) toast('Sheets sync warning: ' + (res.error || 'failed'));
+  }).catch(function(){
+    if(!silent) toast('Could not reach Google Sheets (check connection). Saved locally either way.');
+  });
+}
+
+$('saveSyncBtn').addEventListener('click', function(){
+  setSyncConfig({ url: $('s_syncUrl').value.trim(), secret: $('s_syncSecret').value.trim() });
+  toast('Google Sheets connection saved.');
+  loadSyncForm();
+});
+
+$('testSyncBtn').addEventListener('click', function(){
+  var cfg = { url: $('s_syncUrl').value.trim(), secret: $('s_syncSecret').value.trim() };
+  if(!cfg.url){ $('syncStatus').textContent = 'Enter a Web App URL first.'; return; }
+  $('syncStatus').textContent = 'Testing...';
+  fetch(cfg.url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({ secret: cfg.secret, action: 'list', sheet: 'Company Settings' })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    $('syncStatus').textContent = res.ok
+      ? 'Connected successfully to your Google Sheet.'
+      : 'Connection failed: ' + (res.error || 'check your URL and secret.');
+  }).catch(function(){
+    $('syncStatus').textContent = 'Could not reach that URL. Double-check it was deployed as a Web App with access set to "Anyone."';
+  });
+});
+
+$('syncAllBtn').addEventListener('click', function(){
+  var cfg = getSyncConfig();
+  if(!cfg.url){ toast('Set up and save your connection first.'); return; }
+  var deals = load(KEYS.deals, []);
+  var bosList = load(KEYS.bos, []);
+  var invList = load(KEYS.invoices, []);
+  deals.forEach(function(d){ syncToSheet('Vehicle Deals', dealToSheetRecord(d), true); });
+  bosList.forEach(function(b){ syncToSheet('Bills of Sale', b, true); });
+  invList.forEach(function(i){ syncToSheet('Repair Invoices', invoiceToSheetRecord(i), true); });
+  toast('Sync started for ' + (deals.length + bosList.length + invList.length) + ' records. Check your sheet in a moment.');
 });
 
 /* ===========================================================
