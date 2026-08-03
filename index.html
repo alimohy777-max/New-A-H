@@ -446,6 +446,7 @@ main{max-width:900px;margin:0 auto;padding:14px;}
 <section class="section" id="section-deals">
   <div class="card">
     <h2>Saved Deals</h2>
+    <button type="button" class="btn btn-outline" id="refreshDealsBtn" style="margin-bottom:12px;">Refresh from Google Sheets</button>
     <div class="totals-bar" id="dealsTotals"></div>
     <div class="search-row">
       <input id="dealSearch" placeholder="Search year, make, model, VIN, name">
@@ -590,6 +591,7 @@ main{max-width:900px;margin:0 auto;padding:14px;}
 
   <div class="card">
     <h2>Saved Bills of Sale</h2>
+    <button type="button" class="btn btn-outline" id="refreshBosBtn" style="margin-bottom:12px;">Refresh from Google Sheets</button>
     <div id="bosList"></div>
   </div>
 </section>
@@ -860,6 +862,7 @@ main{max-width:900px;margin:0 auto;padding:14px;}
 
   <div class="card">
     <h2>Saved Repair Invoices</h2>
+    <button type="button" class="btn btn-outline" id="refreshInvBtn" style="margin-bottom:12px;">Refresh from Google Sheets</button>
     <div id="invList"></div>
   </div>
 </section>
@@ -2639,6 +2642,63 @@ function mergeById(localList, remoteRows){
   remoteRows.forEach(function(r){ if(r.id && !byId[r.id]) byId[r.id] = r; });
   return Object.keys(byId).map(function(k){ return byId[k]; });
 }
+
+function sheetRowToDeal(row){
+  var deal = Object.assign({}, row);
+  var json = row['expenses (JSON)'];
+  try { deal.expenses = JSON.parse(json || '[]'); } catch(e){ deal.expenses = []; }
+  delete deal['expenses (JSON)'];
+  return deal;
+}
+function sheetRowToInvoiceRecord(row){
+  var inv = Object.assign({}, row);
+  var json = row['lineItems (JSON)'];
+  try { inv.lineItems = JSON.parse(json || '[]'); } catch(e){ inv.lineItems = []; }
+  delete inv['lineItems (JSON)'];
+  return inv;
+}
+
+$('refreshDealsBtn').addEventListener('click', function(){
+  var cfg = getSyncConfig();
+  if(!cfg.url){ toast('Set up Google Sheets Sync in Settings first.'); return; }
+  toast('Refreshing deals from Google Sheets...');
+  fetchSheetRows('Vehicle Deals').then(function(rows){
+    var remoteDeals = rows.map(sheetRowToDeal);
+    var merged = mergeById(load(KEYS.deals, []), remoteDeals);
+    save(KEYS.deals, merged);
+    renderDealsList();
+    toast('Deals refreshed — ' + merged.length + ' total.');
+  }).catch(function(err){
+    toast('Refresh failed: ' + (err.message || 'check your connection.'));
+  });
+});
+$('refreshBosBtn').addEventListener('click', function(){
+  var cfg = getSyncConfig();
+  if(!cfg.url){ toast('Set up Google Sheets Sync in Settings first.'); return; }
+  toast('Refreshing Bills of Sale from Google Sheets...');
+  fetchSheetRows('Bills of Sale').then(function(rows){
+    var merged = mergeById(load(KEYS.bos, []), rows);
+    save(KEYS.bos, merged);
+    renderBosList();
+    toast('Bills of Sale refreshed — ' + merged.length + ' total.');
+  }).catch(function(err){
+    toast('Refresh failed: ' + (err.message || 'check your connection.'));
+  });
+});
+$('refreshInvBtn').addEventListener('click', function(){
+  var cfg = getSyncConfig();
+  if(!cfg.url){ toast('Set up Google Sheets Sync in Settings first.'); return; }
+  toast('Refreshing Repair Invoices from Google Sheets...');
+  fetchSheetRows('Repair Invoices').then(function(rows){
+    var remoteInv = rows.map(sheetRowToInvoiceRecord);
+    var merged = mergeById(load(KEYS.invoices, []), remoteInv);
+    save(KEYS.invoices, merged);
+    renderInvList();
+    toast('Repair Invoices refreshed — ' + merged.length + ' total.');
+  }).catch(function(err){
+    toast('Refresh failed: ' + (err.message || 'check your connection.'));
+  });
+});
 $('refreshAnalyticsBtn').addEventListener('click', function(){
   var cfg = getSyncConfig();
   if(!cfg.url){ toast('Set up Google Sheets Sync in Settings first.'); return; }
@@ -2670,24 +2730,24 @@ var BMV_KEYS = { f4334: 'ah_form_4334', f3774: 'ah_form_3774', f3772: 'ah_form_3
 
 var BMV_4334_PAGE = { width: 607, height: 791 };
 var BMV_4334_FIELDS = [
-  {id:'vin', x:15, top:130, size:10},
-  {id:'make', x:15, top:200, size:9},
-  {id:'model', x:155, top:200, size:9},
-  {id:'bodyType', x:300, top:200, size:9},
-  {id:'mileage', x:15, top:278, size:9},
-  {id:'ownerName', x:15, top:340, size:9},
-  {id:'ownerDL', x:430, top:340, size:9},
-  {id:'ownerAddress', x:15, top:397, size:9},
-  {id:'ownerCity', x:290, top:397, size:9},
-  {id:'ownerState', x:470, top:397, size:9},
-  {id:'ownerZip', x:530, top:397, size:9},
-  {id:'dealerName', x:15, top:452, size:9},
-  {id:'dealerPermit', x:430, top:452, size:9},
-  {id:'dealerAddress', x:15, top:507, size:9},
-  {id:'dealerCity', x:290, top:507, size:9},
-  {id:'dealerZip', x:530, top:507, size:9},
-  {id:'inspectorName', x:15, top:562, size:9},
-  {id:'inspectorPosition', x:340, top:562, size:9}
+  {id:'vin', x:23.7, top:193.8, size:9},
+  {id:'make', x:23.7, top:261.0, size:9},
+  {id:'model', x:158.3, top:261.0, size:9},
+  {id:'bodyType', x:284.9, top:261.0, size:9},
+  {id:'mileage', x:23.7, top:324.3, size:9},
+  {id:'ownerName', x:23.7, top:415.3, size:9},
+  {id:'ownerDL', x:348.2, top:415.3, size:9},
+  {id:'ownerAddress', x:23.7, top:462.7, size:9},
+  {id:'ownerCity', x:269.1, top:462.7, size:9},
+  {id:'ownerState', x:451.1, top:462.7, size:9},
+  {id:'ownerZip', x:530.2, top:462.7, size:9},
+  {id:'dealerName', x:23.7, top:533.9, size:9},
+  {id:'dealerPermit', x:348.2, top:533.9, size:9},
+  {id:'dealerAddress', x:23.7, top:585.3, size:9},
+  {id:'dealerCity', x:269.1, top:585.3, size:9},
+  {id:'dealerZip', x:530.2, top:585.3, size:9},
+  {id:'inspectorName', x:23.7, top:636.8, size:9},
+  {id:'inspectorPosition', x:348.2, top:636.8, size:9}
 ];
 
 var BMV_3774_PAGE = { width: 612, height: 792 };
@@ -2734,7 +2794,7 @@ var BMV_3772_FIELDS = [
   {id:'model', x:295, top:231, size:9},
   {id:'bodyType', x:406, top:231, size:9},
   {id:'vin', x:27, top:275, size:9},
-  {id:'odometer', x:200, top:256, size:9},
+  {id:'odometer', x:200, top:262, size:9},
   {id:'mileageExceedsX', x:26, top:357, size:8},
   {id:'notActualX', x:26, top:368, size:8},
   {id:'motorVehicleX', x:26, top:399, size:9},
@@ -3076,6 +3136,55 @@ function initBmvForms(){
 }
 
 /* ===========================================================
+   VIN DECODER (free NHTSA public API — no key required)
+=========================================================== */
+function titleCaseWord(s){
+  return String(s).replace(/\w\S*/g, function(t){ return t.charAt(0).toUpperCase() + t.substr(1).toLowerCase(); });
+}
+
+function decodeVinAndFill(vin, targets){
+  toast('Looking up VIN...');
+  fetch('https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/' + encodeURIComponent(vin) + '?format=json')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var r = data.Results && data.Results[0];
+      if(!r || !r.Make){ toast('VIN not recognized — enter details manually.'); return; }
+      var filled = [];
+      if(targets.year && r.ModelYear && !$(targets.year).value){ $(targets.year).value = r.ModelYear; filled.push(r.ModelYear); }
+      if(targets.make && r.Make && !$(targets.make).value){ $(targets.make).value = titleCaseWord(r.Make); filled.push(titleCaseWord(r.Make)); }
+      if(targets.model && r.Model && !$(targets.model).value){ $(targets.model).value = r.Model; filled.push(r.Model); }
+      if(targets.bodyType && r.BodyClass && !$(targets.bodyType).value){ $(targets.bodyType).value = r.BodyClass; }
+      if(filled.length) toast('VIN decoded: ' + filled.join(' '));
+      else toast('VIN decoded (fields already filled in were left as-is).');
+    })
+    .catch(function(){
+      toast('Could not reach VIN lookup service — check your internet connection.');
+    });
+}
+
+function wireVinDecoder(vinFieldId, targets){
+  var el = $(vinFieldId);
+  if(!el) return;
+  var lastDecoded = '';
+  el.addEventListener('input', function(){
+    var vin = el.value.trim().toUpperCase();
+    if(vin.length === 17 && vin !== lastDecoded){
+      lastDecoded = vin;
+      decodeVinAndFill(vin, targets);
+    }
+  });
+}
+
+function initVinDecoders(){
+  wireVinDecoder('c_vin', {year:'c_year', make:'c_make', model:'c_model'});
+  wireVinDecoder('b_vin', {year:'b_year', make:'b_make', model:'b_model'});
+  wireVinDecoder('i_vin', {year:'i_year', make:'i_make', model:'i_model'});
+  wireVinDecoder('f4334_vin', {make:'f4334_make', model:'f4334_model', bodyType:'f4334_bodyType'});
+  wireVinDecoder('f3774_vin', {year:'f3774_year', make:'f3774_make', model:'f3774_model', bodyType:'f3774_bodyType'});
+  wireVinDecoder('f3772_vin', {year:'f3772_year', make:'f3772_make', model:'f3772_model', bodyType:'f3772_bodyType'});
+}
+
+/* ===========================================================
    GOOGLE SHEETS SYNC (optional, via Apps Script Web App)
 =========================================================== */
 function getSyncConfig(){
@@ -3183,6 +3292,7 @@ if(isAuthed()) document.body.classList.add('authed');
 setupGoogleButton();
 init();
 pullUsersFromSheet(); // background refresh, non-blocking, silent if offline or unconfigured
+initVinDecoders();
 
 })();
 </script>
