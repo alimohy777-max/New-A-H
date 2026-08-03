@@ -1028,6 +1028,20 @@ main{max-width:900px;margin:0 auto;padding:14px;}
 (function(){
 "use strict";
 
+/* ===========================================================
+   >>> GOOGLE SHEETS SYNC — PASTE YOUR VALUES BELOW <<<
+   Paste your Apps Script Web App URL between the quotes on the
+   next line (looks like: https://script.google.com/macros/s/XXXXX/exec)
+=========================================================== */
+var DEFAULT_SHEETS_URL = "https://script.google.com/macros/s/AKfycbxDlD5Sv9Veds6i-mMt5F950HSnmqVWouQ7RbRnw-qkl1xcNh7CKY0DNit5MQzOM7GrJw/exec";
+
+/* Paste the SAME secret you set in the Apps Script's
+   var SECRET = '...'; line, between the quotes below. */
+var DEFAULT_SHEETS_SECRET = "AlawyDotCom";
+/* ===========================================================
+   >>> END GOOGLE SHEETS SYNC CONFIG <<<
+=========================================================== */
+
 /* ---------------------------------------------------------
    BMV FORM TEMPLATES (blank official Ohio BMV PDFs, embedded)
 --------------------------------------------------------- */
@@ -3011,7 +3025,9 @@ function initBmvForms(){
 /* ===========================================================
    GOOGLE SHEETS SYNC (optional, via Apps Script Web App)
 =========================================================== */
-function getSyncConfig(){ return Object.assign({url:'', secret:''}, load(KEYS.sheetsSync, {})); }
+function getSyncConfig(){
+  return Object.assign({url: DEFAULT_SHEETS_URL, secret: DEFAULT_SHEETS_SECRET}, load(KEYS.sheetsSync, {}));
+}
 function setSyncConfig(cfg){ save(KEYS.sheetsSync, cfg); }
 
 function loadSyncForm(){
