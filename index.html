@@ -279,6 +279,26 @@ main{max-width:900px;margin:0 auto;padding:14px;}
 
 .settings-sub{font-size:12px;color:#7a8a99;margin:2px 0 10px;}
 
+.field-group{border:1px solid var(--border);border-radius:10px;margin-top:12px;overflow:hidden;}
+.field-group summary{
+  list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;
+  justify-content:space-between;background:#F8FAFD;font-weight:700;font-size:14.5px;color:var(--primary);
+  -webkit-tap-highlight-color:transparent;
+}
+.field-group summary::-webkit-details-marker{display:none;}
+.field-group summary .chev{transition:transform .15s;font-size:13px;color:#7a8a99;}
+.field-group[open] summary .chev{transform:rotate(90deg);}
+.field-group summary .fg-subtotal{font-weight:700;color:var(--secondary);font-size:13.5px;}
+.field-group .field-group-body{padding:14px;}
+.field-group[open] summary{border-bottom:1px solid var(--border);}
+
+.bar-chart{display:flex;align-items:flex-end;gap:10px;min-height:170px;padding:10px 4px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.bar-chart .bar-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:44px;flex:1 0 44px;height:170px;}
+.bar-chart .bar-value{font-size:10.5px;color:var(--primary);font-weight:700;margin-bottom:4px;white-space:nowrap;}
+.bar-chart .bar{width:100%;max-width:32px;border-radius:6px 6px 0 0;background:var(--secondary);min-height:2px;}
+.bar-chart .bar.neg{background:var(--red);}
+.bar-chart .bar-label{font-size:10px;color:#5b6b7a;margin-top:6px;white-space:nowrap;text-align:center;}
+
 @media print{
   body *{visibility:hidden;}
   .print-view.active, .print-view.active *{visibility:visible;}
@@ -318,6 +338,7 @@ main{max-width:900px;margin:0 auto;padding:14px;}
   <button type="button" data-tab="deals">Saved Deals</button>
   <button type="button" data-tab="bos">Bill of Sale</button>
   <button type="button" data-tab="invoice">Repair Invoice</button>
+  <button type="button" data-tab="analytics">Analytics</button>
   <button type="button" data-tab="settings">Settings</button>
 </nav>
 
@@ -345,36 +366,53 @@ main{max-width:900px;margin:0 auto;padding:14px;}
       <option>Clean</option><option>Rebuilt</option><option>Salvage</option>
     </select>
 
-    <h3>Purchase Costs</h3>
-    <div class="grid2">
-      <div><label>Purchase Price</label><input class="calc-input" id="c_purchasePrice" inputmode="decimal" value="0"></div>
-      <div><label>Auction Fees</label><input class="calc-input" id="c_auctionFees" inputmode="decimal" value="0"></div>
-      <div><label>Broker Fees</label><input class="calc-input" id="c_brokerFees" inputmode="decimal" value="0"></div>
-      <div><label>Transportation Cost</label><input class="calc-input" id="c_transportationCost" inputmode="decimal" value="0"></div>
-    </div>
+    <div style="margin-top:14px;"><label style="margin:0 0 4px;">Purchase Price</label><input class="calc-input" id="c_purchasePrice" inputmode="decimal" value="0"></div>
 
-    <h3>Repair Costs</h3>
-    <div class="grid2">
-      <div><label>Mechanical Repair</label><input class="calc-input" id="c_mechanicalRepair" inputmode="decimal" value="0"></div>
-      <div><label>Body Repair</label><input class="calc-input" id="c_bodyRepair" inputmode="decimal" value="0"></div>
-      <div><label>Paint Cost</label><input class="calc-input" id="c_paintCost" inputmode="decimal" value="0"></div>
-      <div><label>Airbag Reset</label><input class="calc-input" id="c_airbagReset" inputmode="decimal" value="0"></div>
-      <div><label>Tires</label><input class="calc-input" id="c_tires" inputmode="decimal" value="0"></div>
-      <div><label>Alignment</label><input class="calc-input" id="c_alignment" inputmode="decimal" value="0"></div>
-    </div>
+    <details class="field-group" id="grp_purchase">
+      <summary>Auction, Broker &amp; Transport Fees <span class="chev">&#9656;</span><span class="fg-subtotal" id="sub_purchase">$0.00</span></summary>
+      <div class="field-group-body">
+        <div class="grid2">
+          <div><label style="margin-top:0;">Auction Fees</label><input class="calc-input" id="c_auctionFees" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Broker Fees</label><input class="calc-input" id="c_brokerFees" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Transportation Cost</label><input class="calc-input" id="c_transportationCost" inputmode="decimal" value="0"></div>
+        </div>
+      </div>
+    </details>
 
-    <h3>Additional Fees</h3>
-    <div class="grid2">
-      <div><label>Inspection Fee</label><input class="calc-input" id="c_inspectionFee" inputmode="decimal" value="0"></div>
-      <div><label>Title Fee</label><input class="calc-input" id="c_titleFee" inputmode="decimal" value="0"></div>
-      <div><label>Registration Fee</label><input class="calc-input" id="c_registrationFee" inputmode="decimal" value="0"></div>
-      <div><label>Detail / Cleaning</label><input class="calc-input" id="c_detailCleaning" inputmode="decimal" value="0"></div>
-      <div><label>Other Fees</label><input class="calc-input" id="c_otherFees" inputmode="decimal" value="0"></div>
-    </div>
+    <details class="field-group" id="grp_repair">
+      <summary>Repair Costs <span class="chev">&#9656;</span><span class="fg-subtotal" id="sub_repair">$0.00</span></summary>
+      <div class="field-group-body">
+        <div class="grid2">
+          <div><label style="margin-top:0;">Mechanical Repair</label><input class="calc-input" id="c_mechanicalRepair" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Body Repair</label><input class="calc-input" id="c_bodyRepair" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Paint Cost</label><input class="calc-input" id="c_paintCost" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Airbag Reset</label><input class="calc-input" id="c_airbagReset" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Tires</label><input class="calc-input" id="c_tires" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Alignment</label><input class="calc-input" id="c_alignment" inputmode="decimal" value="0"></div>
+        </div>
+      </div>
+    </details>
 
-    <h3>Parts and Additional Expenses</h3>
-    <div id="expenseRows"></div>
-    <button type="button" class="btn btn-outline" id="addExpenseBtn" style="margin-top:10px;">+ Add Expense</button>
+    <details class="field-group" id="grp_fees">
+      <summary>Inspection, Title &amp; Other Fees <span class="chev">&#9656;</span><span class="fg-subtotal" id="sub_fees">$0.00</span></summary>
+      <div class="field-group-body">
+        <div class="grid2">
+          <div><label style="margin-top:0;">Inspection Fee</label><input class="calc-input" id="c_inspectionFee" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Title Fee</label><input class="calc-input" id="c_titleFee" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Registration Fee</label><input class="calc-input" id="c_registrationFee" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Detail / Cleaning</label><input class="calc-input" id="c_detailCleaning" inputmode="decimal" value="0"></div>
+          <div><label style="margin-top:0;">Other Fees</label><input class="calc-input" id="c_otherFees" inputmode="decimal" value="0"></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="field-group" id="grp_parts">
+      <summary>Parts &amp; Additional Expenses <span class="chev">&#9656;</span><span class="fg-subtotal" id="sub_parts">$0.00</span></summary>
+      <div class="field-group-body">
+        <div id="expenseRows"></div>
+        <button type="button" class="btn btn-outline" id="addExpenseBtn" style="margin-top:10px;">+ Add Expense</button>
+      </div>
+    </details>
 
     <h3>Selling Price</h3>
     <div class="grid2">
@@ -382,8 +420,12 @@ main{max-width:900px;margin:0 auto;padding:14px;}
       <div><label>Actual Selling Price</label><input class="calc-input" id="c_actualSellingPrice" inputmode="decimal" value="0"></div>
     </div>
 
-    <label>Notes</label>
-    <textarea id="c_notes" placeholder="Optional notes about this deal"></textarea>
+    <details class="field-group">
+      <summary>Notes <span class="chev">&#9656;</span></summary>
+      <div class="field-group-body">
+        <textarea id="c_notes" placeholder="Optional notes about this deal"></textarea>
+      </div>
+    </details>
   </div>
 
   <div class="card">
@@ -428,13 +470,17 @@ main{max-width:900px;margin:0 auto;padding:14px;}
     <label>Bill of Sale Number</label>
     <input id="b_number" readonly>
 
-    <h3>Seller Information</h3>
-    <div class="grid2">
-      <div><label>Dealer Address</label><input id="b_dealerAddress"></div>
-      <div><label>Dealer Phone</label><input id="b_dealerPhone" inputmode="tel"></div>
-      <div><label>Dealer Email</label><input id="b_dealerEmail" inputmode="email"></div>
-      <div><label>Dealer License Number</label><input id="b_dealerLicense"></div>
-    </div>
+    <details class="field-group">
+      <summary>Seller Information <span class="chev">&#9656;</span></summary>
+      <div class="field-group-body">
+        <div class="grid2">
+          <div><label style="margin-top:0;">Dealer Address</label><input id="b_dealerAddress"></div>
+          <div><label style="margin-top:0;">Dealer Phone</label><input id="b_dealerPhone" inputmode="tel"></div>
+          <div><label style="margin-top:0;">Dealer Email</label><input id="b_dealerEmail" inputmode="email"></div>
+          <div><label style="margin-top:0;">Dealer License Number</label><input id="b_dealerLicense"></div>
+        </div>
+      </div>
+    </details>
 
     <h3>Transaction</h3>
     <div class="grid2">
@@ -488,40 +534,47 @@ main{max-width:900px;margin:0 auto;padding:14px;}
       <option>Mileage Exceeds Mechanical Limits</option>
     </select>
 
-    <h3>Warranty</h3>
-    <label>Warranty Type</label>
-    <select id="b_warrantyType">
-      <option value="none">No Warranty &ndash; AS-IS</option>
-      <option value="30day">30-Day Engine and Transmission Warranty</option>
-      <option value="custom">Custom Written Warranty</option>
-    </select>
-    <div id="warrantyDatesWrap" style="display:none;">
-      <div class="grid2">
-        <div><label>Warranty Start Date</label><input type="date" id="b_warrantyStart"></div>
-        <div><label>Warranty Expiration Date</label><input type="date" id="b_warrantyEnd"></div>
+    <details class="field-group">
+      <summary>Warranty &amp; Disclosure <span class="chev">&#9656;</span></summary>
+      <div class="field-group-body">
+        <label style="margin-top:0;">Warranty Type</label>
+        <select id="b_warrantyType">
+          <option value="none">No Warranty &ndash; AS-IS</option>
+          <option value="30day">30-Day Engine and Transmission Warranty</option>
+          <option value="custom">Custom Written Warranty</option>
+        </select>
+        <div id="warrantyDatesWrap" style="display:none;">
+          <div class="grid2">
+            <div><label>Warranty Start Date</label><input type="date" id="b_warrantyStart"></div>
+            <div><label>Warranty Expiration Date</label><input type="date" id="b_warrantyEnd"></div>
+          </div>
+        </div>
+        <div id="customWarrantyWrap" style="display:none;">
+          <label>Custom Warranty Text</label>
+          <textarea id="b_customWarrantyText" placeholder="Enter custom warranty terms"></textarea>
+        </div>
+        <div class="disclosure">
+          <b>AS-IS DISCLOSURE:</b><br><br>
+          The vehicle described in this Bill of Sale is sold AS-IS, with no warranties expressed or implied, except for any written warranty specifically stated in this document. The buyer acknowledges that the buyer has inspected the vehicle or has had the opportunity to inspect the vehicle before completing the purchase.<br><br>
+          The dealer makes no guarantee regarding future mechanical or electrical conditions unless specifically stated in writing.
+        </div>
       </div>
-    </div>
-    <div id="customWarrantyWrap" style="display:none;">
-      <label>Custom Warranty Text</label>
-      <textarea id="b_customWarrantyText" placeholder="Enter custom warranty terms"></textarea>
-    </div>
-
-    <div class="disclosure">
-      <b>AS-IS DISCLOSURE:</b><br><br>
-      The vehicle described in this Bill of Sale is sold AS-IS, with no warranties expressed or implied, except for any written warranty specifically stated in this document. The buyer acknowledges that the buyer has inspected the vehicle or has had the opportunity to inspect the vehicle before completing the purchase.<br><br>
-      The dealer makes no guarantee regarding future mechanical or electrical conditions unless specifically stated in writing.
-    </div>
+    </details>
 
     <h3>Summary</h3>
     <table class="summary-list" id="bosSummaryTable"></table>
 
-    <h3>Signatures (signed on printed copy)</h3>
-    <div class="grid2">
-      <div><label>Buyer Printed Name</label><input id="b_buyerPrintedName"></div>
-      <div><label>Second Buyer (optional)</label><input id="b_buyer2Name"></div>
-      <div><label>Dealer Representative Printed Name</label><input id="b_repPrintedName"></div>
-      <div><label>Signature Date</label><input type="date" id="b_sigDate"></div>
-    </div>
+    <details class="field-group">
+      <summary>Signatures (signed on printed copy) <span class="chev">&#9656;</span></summary>
+      <div class="field-group-body">
+        <div class="grid2">
+          <div><label style="margin-top:0;">Buyer Printed Name</label><input id="b_buyerPrintedName"></div>
+          <div><label style="margin-top:0;">Second Buyer (optional)</label><input id="b_buyer2Name"></div>
+          <div><label style="margin-top:0;">Dealer Representative Printed Name</label><input id="b_repPrintedName"></div>
+          <div><label style="margin-top:0;">Signature Date</label><input type="date" id="b_sigDate"></div>
+        </div>
+      </div>
+    </details>
 
     <div class="btn-row">
       <button type="button" class="btn btn-outline" id="bosClearBtn">Clear Form</button>
@@ -549,22 +602,24 @@ main{max-width:900px;margin:0 auto;padding:14px;}
     <label>Invoice Number</label>
     <input id="i_number" readonly>
 
-    <h3>Shop Information</h3>
-    <div class="grid2">
-      <div><label>Shop Address</label><input id="i_shopAddress"></div>
-      <div><label>Shop Phone</label><input id="i_shopPhone" inputmode="tel"></div>
-      <div><label>Shop Email</label><input id="i_shopEmail" inputmode="email"></div>
-      <div><label>Repair Status</label>
-        <select id="i_status">
-          <option>Estimate</option><option>Approved</option><option>In Progress</option>
-          <option>Completed</option><option>Paid</option>
-        </select>
+    <details class="field-group">
+      <summary>Shop Information &amp; Status <span class="chev">&#9656;</span></summary>
+      <div class="field-group-body">
+        <div class="grid2">
+          <div><label style="margin-top:0;">Shop Address</label><input id="i_shopAddress"></div>
+          <div><label style="margin-top:0;">Shop Phone</label><input id="i_shopPhone" inputmode="tel"></div>
+          <div><label style="margin-top:0;">Shop Email</label><input id="i_shopEmail" inputmode="email"></div>
+          <div><label style="margin-top:0;">Repair Status</label>
+            <select id="i_status">
+              <option>Estimate</option><option>Approved</option><option>In Progress</option>
+              <option>Completed</option><option>Paid</option>
+            </select>
+          </div>
+          <div><label style="margin-top:0;">Invoice Date</label><input type="date" id="i_date"></div>
+          <div><label style="margin-top:0;">Due Date</label><input type="date" id="i_dueDate"></div>
+        </div>
       </div>
-    </div>
-    <div class="grid2">
-      <div><label>Invoice Date</label><input type="date" id="i_date"></div>
-      <div><label>Due Date</label><input type="date" id="i_dueDate"></div>
-    </div>
+    </details>
 
     <h3>Customer Information</h3>
     <div class="grid2">
@@ -604,22 +659,30 @@ main{max-width:900px;margin:0 auto;padding:14px;}
     <table class="summary-list" id="invSummaryTable" style="margin-top:14px;"></table>
     <div class="balance-banner" id="invBalanceBanner"></div>
 
-    <h3>Warranty &amp; Notes</h3>
-    <label>Parts Warranty</label>
-    <input id="i_partsWarranty" placeholder="e.g. 90 days on new parts">
-    <label>Labor Warranty</label>
-    <input id="i_laborWarranty" placeholder="e.g. 30 days on labor">
-    <label>Warranty Terms</label>
-    <textarea id="i_warrantyTerms">All repairs and warranties are limited to the work specifically listed on this invoice. Warranty coverage does not include unrelated vehicle problems, customer abuse, accidents, overheating, lack of maintenance, or failure of parts not supplied or installed by the shop.</textarea>
-    <label>Additional Notes</label>
-    <textarea id="i_notes"></textarea>
+    <details class="field-group">
+      <summary>Warranty &amp; Notes <span class="chev">&#9656;</span></summary>
+      <div class="field-group-body">
+        <label style="margin-top:0;">Parts Warranty</label>
+        <input id="i_partsWarranty" placeholder="e.g. 90 days on new parts">
+        <label>Labor Warranty</label>
+        <input id="i_laborWarranty" placeholder="e.g. 30 days on labor">
+        <label>Warranty Terms</label>
+        <textarea id="i_warrantyTerms">All repairs and warranties are limited to the work specifically listed on this invoice. Warranty coverage does not include unrelated vehicle problems, customer abuse, accidents, overheating, lack of maintenance, or failure of parts not supplied or installed by the shop.</textarea>
+        <label>Additional Notes</label>
+        <textarea id="i_notes"></textarea>
+      </div>
+    </details>
 
-    <h3>Signatures (signed on printed copy)</h3>
-    <div class="grid2">
-      <div><label>Customer Printed Name</label><input id="i_custPrintedName"></div>
-      <div><label>Shop Representative Printed Name</label><input id="i_repPrintedName"></div>
-      <div><label>Signature Date</label><input type="date" id="i_sigDate"></div>
-    </div>
+    <details class="field-group">
+      <summary>Signatures (signed on printed copy) <span class="chev">&#9656;</span></summary>
+      <div class="field-group-body">
+        <div class="grid2">
+          <div><label style="margin-top:0;">Customer Printed Name</label><input id="i_custPrintedName"></div>
+          <div><label style="margin-top:0;">Shop Representative Printed Name</label><input id="i_repPrintedName"></div>
+          <div><label style="margin-top:0;">Signature Date</label><input type="date" id="i_sigDate"></div>
+        </div>
+      </div>
+    </details>
 
     <div class="btn-row">
       <button type="button" class="btn btn-outline" id="invClearBtn">Clear Invoice</button>
@@ -634,6 +697,40 @@ main{max-width:900px;margin:0 auto;padding:14px;}
   <div class="card">
     <h2>Saved Repair Invoices</h2>
     <div id="invList"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     SECTION 5: ANALYTICS
+========================================================= -->
+<section class="section" id="section-analytics">
+  <div class="card">
+    <h2>Profit &amp; Revenue Overview</h2>
+    <div class="settings-sub">All figures are from your saved records on this device.</div>
+    <div class="totals-bar" id="analyticsKpis" style="grid-template-columns:1fr 1fr;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Vehicle Sales Profit</h2>
+    <div class="settings-sub">Actual profit from deals marked Sold, from the Profit Calculator.</div>
+    <div id="analyticsDealsChart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Bill of Sale Revenue</h2>
+    <div class="settings-sub">Total Amount collected across saved Bills of Sale, by month.</div>
+    <div id="analyticsBosChart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Repair Invoice Revenue</h2>
+    <div class="settings-sub">Invoice Total collected across saved Repair Invoices, by month.</div>
+    <div id="analyticsInvChart"></div>
+  </div>
+
+  <div class="card">
+    <h2>Revenue by Section</h2>
+    <div id="analyticsSourceChart"></div>
   </div>
 </section>
 
@@ -686,6 +783,7 @@ main{max-width:900px;margin:0 auto;padding:14px;}
       <label><input type="checkbox" id="newUserPerm_deals"> Saved Deals</label>
       <label><input type="checkbox" id="newUserPerm_bos"> Bill of Sale</label>
       <label><input type="checkbox" id="newUserPerm_invoice"> Repair Invoice / Body Shop</label>
+      <label><input type="checkbox" id="newUserPerm_analytics"> Analytics</label>
       <label><input type="checkbox" id="newUserPerm_settings"> Company Settings &amp; Backup</label>
     </div>
     <button type="button" class="btn btn-primary" id="addUserBtn" style="margin-top:12px;">Add User</button>
@@ -815,7 +913,7 @@ var KEYS = {
    AUTHENTICATION & USERS (client-side only — see notes to user)
 --------------------------------------------------------- */
 var AUTH_SESSION_KEY = 'ah_authed';
-var PERMISSION_KEYS = ['calculator','deals','bos','invoice','settings'];
+var PERMISSION_KEYS = ['calculator','deals','bos','invoice','analytics','settings'];
 
 function defaultPermissions(allTrue){
   var p = {};
@@ -965,7 +1063,7 @@ function renderUsersList(){
   var wrap = $('usersList');
   if(users.length===0){ wrap.innerHTML = '<div class="empty-state">No users yet.</div>'; return; }
   wrap.innerHTML = '';
-  var labels = {calculator:'Profit Calculator', deals:'Saved Deals', bos:'Bill of Sale', invoice:'Repair Invoice', settings:'Company Settings & Backup'};
+  var labels = {calculator:'Profit Calculator', deals:'Saved Deals', bos:'Bill of Sale', invoice:'Repair Invoice', analytics:'Analytics', settings:'Company Settings & Backup'};
   users.forEach(function(u){
     var el = document.createElement('div');
     el.className = 'deal-card';
@@ -1130,6 +1228,7 @@ document.getElementById('tabNav').addEventListener('click', function(e){
   $('section-'+btn.dataset.tab).classList.add('active');
   window.scrollTo({top:0,behavior:'instant' in window ? 'instant':'auto'});
   if(btn.dataset.tab === 'deals') renderDealsList();
+  if(btn.dataset.tab === 'analytics') renderAnalytics();
 });
 
 /* ===========================================================
@@ -1273,6 +1372,10 @@ function computeTotals(v, expenseList){
 function recalcDeal(){
   var v = currentDealValues();
   var t = computeTotals(v, expenses);
+  $('sub_purchase').textContent = money(v.auctionFees + v.brokerFees + v.transportationCost);
+  $('sub_repair').textContent = money(v.mechanicalRepair + v.bodyRepair + v.paintCost + v.airbagReset + v.tires + v.alignment);
+  $('sub_fees').textContent = money(v.inspectionFee + v.titleFee + v.registrationFee + v.detailCleaning + v.otherFees);
+  $('sub_parts').textContent = money(t.expenseTotal);
   var rows = [
     ['Purchase Price', v.purchasePrice],
     ['Auction + Broker Fees', v.auctionFees + v.brokerFees],
@@ -2122,6 +2225,76 @@ $('deleteAllBtn').addEventListener('click', function(){
 });
 
 /* ===========================================================
+   ANALYTICS
+=========================================================== */
+function monthLabel(dateStr){
+  if(!dateStr) return 'Unknown';
+  var d = new Date(dateStr);
+  if(isNaN(d.getTime())) return 'Unknown';
+  return d.toLocaleDateString('en-US', {month:'short', year:'numeric'});
+}
+function monthKey(dateStr){
+  if(!dateStr) return 'zzzz';
+  var d = new Date(dateStr);
+  if(isNaN(d.getTime())) return 'zzzz';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function groupSumByMonth(records, dateField, amountField){
+  var map = {};
+  records.forEach(function(r){
+    var key = monthKey(r[dateField]);
+    var label = monthLabel(r[dateField]);
+    if(!map[key]) map[key] = {label:label, total:0};
+    map[key].total += num(r[amountField]);
+  });
+  return Object.keys(map).sort().map(function(k){ return map[k]; });
+}
+function renderBarChart(containerId, points, colorNeg){
+  var el = $(containerId);
+  if(points.length === 0){ el.innerHTML = '<div class="empty-state">Not enough data yet.</div>'; return; }
+  var max = Math.max.apply(null, points.map(function(p){ return Math.abs(p.total); }).concat([1]));
+  var html = '<div class="bar-chart">';
+  points.forEach(function(p){
+    var pct = Math.max(4, Math.round(Math.abs(p.total) / max * 150));
+    var isNeg = colorNeg && p.total < 0;
+    html += '<div class="bar-col">' +
+      '<div class="bar-value">' + money(p.total) + '</div>' +
+      '<div class="bar' + (isNeg ? ' neg' : '') + '" style="height:' + pct + 'px;"></div>' +
+      '<div class="bar-label">' + esc(p.label) + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+function renderAnalytics(){
+  var deals = load(KEYS.deals, []);
+  var bosList = load(KEYS.bos, []);
+  var invList = load(KEYS.invoices, []);
+
+  var soldDeals = deals.filter(function(d){ return d.status === 'Sold'; });
+  var totalVehicleProfit = soldDeals.reduce(function(s,d){ return s + num(d.actualProfit); }, 0);
+  var totalBosRevenue = bosList.reduce(function(s,b){ return s + num(b.totalAmount); }, 0);
+  var totalInvRevenue = invList.reduce(function(s,i){ return s + num(i.invoiceTotal); }, 0);
+  var combinedRevenue = totalBosRevenue + totalInvRevenue;
+
+  $('analyticsKpis').innerHTML =
+    '<div class="box"><div class="n ' + (totalVehicleProfit>=0?'pos':'neg') + '">' + money(totalVehicleProfit) + '</div><div class="l">Vehicle Sales Profit</div></div>' +
+    '<div class="box"><div class="n">' + soldDeals.length + '</div><div class="l">Vehicles Sold</div></div>' +
+    '<div class="box"><div class="n">' + money(totalBosRevenue) + '</div><div class="l">Bill of Sale Revenue</div></div>' +
+    '<div class="box"><div class="n">' + money(totalInvRevenue) + '</div><div class="l">Repair Invoice Revenue</div></div>' +
+    '<div class="box" style="grid-column:1/3;"><div class="n">' + money(combinedRevenue) + '</div><div class="l">Combined Revenue (Bill of Sale + Repairs)</div></div>';
+
+  renderBarChart('analyticsDealsChart', groupSumByMonth(soldDeals, 'dateCreated', 'actualProfit'), true);
+  renderBarChart('analyticsBosChart', groupSumByMonth(bosList, 'date', 'totalAmount'), false);
+  renderBarChart('analyticsInvChart', groupSumByMonth(invList, 'date', 'invoiceTotal'), false);
+  renderBarChart('analyticsSourceChart', [
+    {label:'Vehicle Sales', total: totalVehicleProfit},
+    {label:'Bill of Sale', total: totalBosRevenue},
+    {label:'Repair Invoices', total: totalInvRevenue}
+  ], true);
+}
+
+/* ===========================================================
    GOOGLE SHEETS SYNC (optional, via Apps Script Web App)
 =========================================================== */
 function getSyncConfig(){ return Object.assign({url:'', secret:''}, load(KEYS.sheetsSync, {})); }
@@ -2210,6 +2383,7 @@ function init(){
   renderDealsList();
   renderBosList();
   renderInvList();
+  renderAnalytics();
 }
 
 if(isAuthed()) document.body.classList.add('authed');
