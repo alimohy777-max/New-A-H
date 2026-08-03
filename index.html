@@ -1126,6 +1126,7 @@ $('usersList').addEventListener('click', function(e){
     toast('User updated.');
     renderUsersList();
     applyRoleVisibility();
+    syncToSheet('Users', userToSheetRecord(u));
   } else if(btn.dataset.act === 'del'){
     var me = currentUser();
     if(me && me.id===id){ toast('You cannot delete the account you are signed in with.'); return; }
@@ -1138,6 +1139,7 @@ $('usersList').addEventListener('click', function(e){
       saveUsers(users);
       renderUsersList();
       toast('User deleted.');
+      deleteFromSheet('Users', id);
     }
   }
 });
@@ -1155,13 +1157,23 @@ $('addUserBtn').addEventListener('click', function(){
     var cb = $('newUserPerm_'+k);
     if(cb) permissions[k] = cb.checked;
   });
-  users.push({id:uid(), username:username, password:password, role:role, permissions:permissions, createdAt:new Date().toISOString()});
+  var newUser = {id:uid(), username:username, password:password, role:role, permissions:permissions, createdAt:new Date().toISOString()};
+  users.push(newUser);
   saveUsers(users);
   $('newUserUsername').value=''; $('newUserPassword').value=''; $('newUserRole').value='staff';
   PERMISSION_KEYS.forEach(function(k){ var cb=$('newUserPerm_'+k); if(cb) cb.checked=false; });
   toast('User added.');
   renderUsersList();
+  syncToSheet('Users', userToSheetRecord(newUser));
 });
+
+function userToSheetRecord(u){
+  var rec = { id: u.id, username: u.username, password: '', role: u.role, createdAt: u.createdAt };
+  PERMISSION_KEYS.forEach(function(k){
+    rec['perm_' + k] = (u.permissions && u.permissions[k]) ? 'TRUE' : 'FALSE';
+  });
+  return rec;
+}
 
 /* ---- Google Sign-In ---- */
 function setupGoogleButton(){
@@ -2446,6 +2458,15 @@ function syncToSheet(sheetName, record, silent){
   }).catch(function(){
     if(!silent) toast('Could not reach Google Sheets (check connection). Saved locally either way.');
   });
+}
+function deleteFromSheet(sheetName, id){
+  var cfg = getSyncConfig();
+  if(!cfg.url) return;
+  fetch(cfg.url, {
+    method: 'POST',
+    headers: {'Content-Type': 'text/plain;charset=utf-8'},
+    body: JSON.stringify({ secret: cfg.secret, action: 'delete', sheet: sheetName, id: id })
+  }).catch(function(){ /* silent — local delete already succeeded */ });
 }
 
 $('saveSyncBtn').addEventListener('click', function(){
